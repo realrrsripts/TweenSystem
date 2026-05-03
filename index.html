@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tween Studio - Roblox UI Animation</title>
-  
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -15,14 +13,9 @@
       },
     }
   </script>
-
-  <!-- React & ReactDOM -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  
-  <!-- Babel for inline JSX compilation -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
   <style>
     body {
       margin: 0;
@@ -30,8 +23,6 @@
       font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
       overflow: hidden;
     }
-    
-    /* Custom Scrollbar for a cleaner look */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -46,8 +37,6 @@
     ::-webkit-scrollbar-thumb:hover {
       background: rgba(156, 163, 175, 0.5);
     }
-    
-    /* Hide number input spinners */
     input[type=number]::-webkit-inner-spin-button, 
     input[type=number]::-webkit-outer-spin-button { 
       -webkit-appearance: none; 
@@ -60,11 +49,8 @@
 </head>
 <body>
   <div id="root"></div>
-
   <script type="text/babel">
     const { useState, useEffect, useRef, useMemo } = React;
-
-    // --- Built-in Icon Component (Replacing lucide-react) ---
     const iconPaths = {
       play: '<polygon points="5 3 19 12 5 21 5 3"></polygon>',
       pause: '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>',
@@ -80,7 +66,6 @@
       sun: '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path>',
       moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>'
     };
-
     const Icon = ({ name, size = 24, className = '', fill = 'none' }) => (
       <svg 
         xmlns="http://www.w3.org/2000/svg" 
@@ -96,24 +81,18 @@
         dangerouslySetInnerHTML={{ __html: iconPaths[name] || '' }}
       />
     );
-
-    // --- Constants & Enums ---
     const EasingStyles = [
       'Linear', 'Sine', 'Back', 'Quad', 'Quart', 'Quint', 'Bounce', 'Elastic', 'Expo', 'Circular', 'Cubic'
     ];
     const EasingDirections = ['In', 'Out', 'InOut'];
-
     const DefaultBaseState = {
-      Position: { xs: 0.5, xo: -50, ys: 0.5, yo: -50 }, // Center
-      Size: { xs: 0, xo: 100, ys: 0, yo: 100 }, // 100x100
+      Position: { xs: 0.5, xo: -50, ys: 0.5, yo: -50 },
+      Size: { xs: 0, xo: 100, ys: 0, yo: 100 },
       Rotation: 0,
       BackgroundTransparency: 0,
-      BackgroundColor3: '#3b82f6', // Tailwind blue-500
+      BackgroundColor3: '#3b82f6',
     };
-
-    // --- Helper Functions ---
     const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
-
     const hexToRgb = (hex) => {
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
       return result ? {
@@ -122,12 +101,8 @@
         b: parseInt(result[3], 16) / 255
       } : { r: 1, g: 1, b: 1 };
     };
-
-    // --- Main Application Component ---
     function TweenStudio() {
-      // --- Theme State ---
       const [isDarkMode, setIsDarkMode] = useState(true);
-
       useEffect(() => {
         if (isDarkMode) {
           document.documentElement.classList.add('dark');
@@ -135,8 +110,6 @@
           document.documentElement.classList.remove('dark');
         }
       }, [isDarkMode]);
-
-      // --- State ---
       const [tweens, setTweens] = useState([
         {
           id: 'tween-1',
@@ -171,27 +144,17 @@
       ]);
       const [selectedTweenId, setSelectedTweenId] = useState('tween-1');
       const [baseState, setBaseState] = useState(DefaultBaseState);
-      
-      // Playback State
       const [isPlaying, setIsPlaying] = useState(false);
       const [currentTime, setCurrentTime] = useState(0);
       const maxTimelineDuration = 10; 
       const animationRef = useRef(null);
       const lastUpdateRef = useRef(0);
-
-      // Timeline Drag State
       const [draggingBlock, setDraggingBlock] = useState(null);
       const timelineRef = useRef(null);
-      
-      // Timeline Scrubbing State
       const [isScrubbing, setIsScrubbing] = useState(false);
       const rulerRef = useRef(null);
-
-      // Export State
       const [showExport, setShowExport] = useState(false);
       const [copiedCode, setCopiedCode] = useState(false);
-
-      // --- Playback Engine ---
       const togglePlay = () => {
         if (isPlaying) {
           setIsPlaying(false);
@@ -203,17 +166,14 @@
           animationRef.current = requestAnimationFrame(updateTime);
         }
       };
-
       const stopPlayback = () => {
         setIsPlaying(false);
         setCurrentTime(0);
         cancelAnimationFrame(animationRef.current);
       };
-
       const updateTime = (time) => {
         const deltaTime = (time - lastUpdateRef.current) / 1000; 
         lastUpdateRef.current = time;
-        
         setCurrentTime((prev) => {
           let nextTime = prev + deltaTime;
           if (nextTime >= maxTimelineDuration) {
@@ -223,19 +183,15 @@
           return nextTime;
         });
       };
-
       useEffect(() => {
         if (isPlaying) {
           animationRef.current = requestAnimationFrame(updateTime);
         }
         return () => cancelAnimationFrame(animationRef.current);
       }, [isPlaying, currentTime]);
-
-      // --- Preview Engine ---
       const currentPreviewStyles = useMemo(() => {
         let currentState = JSON.parse(JSON.stringify(baseState));
         const sortedTweens = [...tweens].sort((a, b) => a.startTime - b.startTime);
-
         sortedTweens.forEach(tween => {
           const start = tween.startTime + tween.delay;
           
