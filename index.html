@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tween Studio - Roblox UI Animation</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {},
+      },
+    }
+  </script>
+
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel for inline JSX compilation -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      overflow: hidden;
+    }
+    
+    /* Custom Scrollbar for a cleaner look */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.3);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(156, 163, 175, 0.5);
+    }
+    
+    /* Hide number input spinners */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    // --- Built-in Icon Component (Replacing lucide-react) ---
+    const iconPaths = {
+      play: '<polygon points="5 3 19 12 5 21 5 3"></polygon>',
+      pause: '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>',
+      square: '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>',
+      plus: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
+      'trash-2': '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line>',
+      copy: '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>',
+      code: '<polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline>',
+      settings: '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>',
+      layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 12 12 17 22 12"></polyline><polyline points="2 17 12 22 22 17"></polyline>',
+      check: '<polyline points="20 6 9 17 4 12"></polyline>',
+      'mouse-pointer-2': '<path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"></path>',
+      sun: '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path>',
+      moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>'
+    };
+
+    const Icon = ({ name, size = 24, className = '', fill = 'none' }) => (
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        width={size} 
+        height={size} 
+        viewBox="0 0 24 24" 
+        fill={fill === 'currentColor' ? 'currentColor' : 'none'}
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        className={className}
+        dangerouslySetInnerHTML={{ __html: iconPaths[name] || '' }}
+      />
+    );
+
+    // --- Constants & Enums ---
+    const EasingStyles = [
+      'Linear', 'Sine', 'Back', 'Quad', 'Quart', 'Quint', 'Bounce', 'Elastic', 'Expo', 'Circular', 'Cubic'
+    ];
+    const EasingDirections = ['In', 'Out', 'InOut'];
+
+    const DefaultBaseState = {
+      Position: { xs: 0.5, xo: -50, ys: 0.5, yo: -50 }, // Center
+      Size: { xs: 0, xo: 100, ys: 0, yo: 100 }, // 100x100
+      Rotation: 0,
+      BackgroundTransparency: 0,
+      BackgroundColor3: '#3b82f6', // Tailwind blue-500
+    };
+
+    // --- Helper Functions ---
+    const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+
+    const hexToRgb = (hex) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16) / 255,
+        g: parseInt(result[2], 16) / 255,
+        b: parseInt(result[3], 16) / 255
+      } : { r: 1, g: 1, b: 1 };
+    };
+
+    // --- Main Application Component ---
+    function TweenStudio() {
+      // --- Theme State ---
+      const [isDarkMode, setIsDarkMode] = useState(true);
+
+      useEffect(() => {
+        if (isDarkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }, [isDarkMode]);
+
+      // --- State ---
+      const [tweens, setTweens] = useState([
+        {
+          id: 'tween-1',
+          name: 'Pop In',
+          startTime: 0.5,
+          duration: 1.2,
+          delay: 0,
+          easingStyle: 'Elastic',
+          easingDirection: 'Out',
+          repeatCount: 0,
+          reverses: false,
+          properties: {
+            Size: { xs: 0, xo: 150, ys: 0, yo: 150 },
+            BackgroundColor3: '#ec4899', // Pink
+          }
+        },
+        {
+          id: 'tween-2',
+          name: 'Spin & Move',
+          startTime: 2.0,
+          duration: 1.5,
+          delay: 0,
+          easingStyle: 'Quad',
+          easingDirection: 'InOut',
+          repeatCount: 0,
+          reverses: false,
+          properties: {
+            Position: { xs: 0.8, xo: -50, ys: 0.2, yo: -50 },
+            Rotation: 360,
+          }
+        }
+      ]);
+      const [selectedTweenId, setSelectedTweenId] = useState('tween-1');
+      const [baseState, setBaseState] = useState(DefaultBaseState);
+      
+      // Playback State
+      const [isPlaying, setIsPlaying] = useState(false);
+      const [currentTime, setCurrentTime] = useState(0);
+      const maxTimelineDuration = 10; 
+      const animationRef = useRef(null);
+      const lastUpdateRef = useRef(0);
+
+      // Timeline Drag State
+      const [draggingBlock, setDraggingBlock] = useState(null);
+      const timelineRef = useRef(null);
+      
+      // Timeline Scrubbing State
+      const [isScrubbing, setIsScrubbing] = useState(false);
+      const rulerRef = useRef(null);
+
+      // Export State
+      const [showExport, setShowExport] = useState(false);
+      const [copiedCode, setCopiedCode] = useState(false);
+
+      // --- Playback Engine ---
+      const togglePlay = () => {
+        if (isPlaying) {
+          setIsPlaying(false);
+          cancelAnimationFrame(animationRef.current);
+        } else {
+          if (currentTime >= maxTimelineDuration) setCurrentTime(0);
+          setIsPlaying(true);
+          lastUpdateRef.current = performance.now();
+          animationRef.current = requestAnimationFrame(updateTime);
+        }
+      };
+
+      const stopPlayback = () => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        cancelAnimationFrame(animationRef.current);
+      };
+
+      const updateTime = (time) => {
+        const deltaTime = (time - lastUpdateRef.current) / 1000; 
+        lastUpdateRef.current = time;
+        
+        setCurrentTime((prev) => {
+          let nextTime = prev + deltaTime;
+          if (nextTime >= maxTimelineDuration) {
+            setIsPlaying(false);
+            return maxTimelineDuration;
+          }
+          return nextTime;
+        });
+      };
+
+      useEffect(() => {
+        if (isPlaying) {
+          animationRef.current = requestAnimationFrame(updateTime);
+        }
+        return () => cancelAnimationFrame(animationRef.current);
+      }, [isPlaying, currentTime]);
+
+      // --- Preview Engine ---
+      const currentPreviewStyles = useMemo(() => {
+        let currentState = JSON.parse(JSON.stringify(baseState));
+        const sortedTweens = [...tweens].sort((a, b) => a.startTime - b.startTime);
+
+        sortedTweens.forEach(tween => {
+          const start = tween.startTime + tween.delay;
+          
+          if (currentTime > start) {
+            let progress = clamp((currentTime - start) / tween.duration, 0, 1);
+            let easedProgress = progress;
+            
+            if (tween.easingStyle !== 'Linear') {
+              if (tween.easingDirection === 'In') easedProgress = progress * progress;
+              else if (tween.easingDirection === 'Out') easedProgress = progress * (2 - progress);
+              else easedProgress = progress < .5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+            }
+
+            Object.entries(tween.properties).forEach(([prop, endVal]) => {
+              const startVal = currentState[prop]; 
+              
+              if (prop === 'Position' || prop === 'Size') {
+                currentState[prop] = {
+                  xs: startVal.xs + (endVal.xs - startVal.xs) * easedProgress,
+                  xo: startVal.xo + (endVal.xo - startVal.xo) * easedProgress,
+                  ys: startVal.ys + (endVal.ys - startVal.ys) * easedProgress,
+                  yo: startVal.yo + (endVal.yo - startVal.yo) * easedProgress,
+                };
+              } else if (prop === 'BackgroundColor3') {
+                 if(progress > 0.5) currentState[prop] = endVal;
+              } else {
+                currentState[prop] = startVal + (endVal - startVal) * easedProgress;
+              }
+            });
+          }
+        });
+
+        return {
+          left: `calc(${currentState.Position.xs * 100}% + ${currentState.Position.xo}px)`,
+          top: `calc(${currentState.Position.ys * 100}% + ${currentState.Position.yo}px)`,
+          width: `calc(${currentState.Size.xs * 100}% + ${currentState.Size.xo}px)`,
+          height: `calc(${currentState.Size.ys * 100}% + ${currentState.Size.yo}px)`,
+          transform: `rotate(${currentState.Rotation}deg)`,
+          backgroundColor: currentState.BackgroundColor3,
+          opacity: 1 - currentState.BackgroundTransparency,
+          position: 'absolute',
+        };
+      }, [tweens, baseState, currentTime]);
+
+      // --- Event Handlers ---
+      const addTween = () => {
+        const newId = `tween-${Date.now()}`;
+        setTweens([...tweens, {
+          id: newId,
+          name: `Tween ${tweens.length + 1}`,
+          startTime: clamp(currentTime, 0, maxTimelineDuration - 1),
+          duration: 1,
+          delay: 0,
+          easingStyle: 'Quad',
+          easingDirection: 'Out',
+          repeatCount: 0,
+          reverses: false,
+          properties: {}
+        }]);
+        setSelectedTweenId(newId);
+      };
+
+      const deleteTween = (id) => {
+        setTweens(tweens.filter(t => t.id !== id));
+        if (selectedTweenId === id) setSelectedTweenId(null);
+      };
+
+      const updateTween = (id, updates) => {
+        setTweens(tweens.map(t => t.id === id ? { ...t, ...updates } : t));
+      };
+
+      // --- Timeline Scrubbing Logic ---
+      const handleScrub = (clientX) => {
+        if (!rulerRef.current) return;
+        const rect = rulerRef.current.getBoundingClientRect();
+        const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+        const percentage = x / rect.width;
+        const newTime = percentage * maxTimelineDuration;
+        setCurrentTime(newTime);
+      };
+
+      const handleRulerMouseDown = (e) => {
+        if (isPlaying) stopPlayback();
+        setIsScrubbing(true);
+        handleScrub(e.clientX);
+      };
+
+      useEffect(() => {
+        const handleMouseMove = (e) => {
+          if (isScrubbing) {
+            handleScrub(e.clientX);
+          }
+        };
+        const handleMouseUp = () => {
+          setIsScrubbing(false);
+        };
+
+        if (isScrubbing) {
+          window.addEventListener('mousemove', handleMouseMove);
+          window.addEventListener('mouseup', handleMouseUp);
+        }
+        return () => {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+        };
+      }, [isScrubbing, maxTimelineDuration]);
+
+      // --- Timeline Drag Logic ---
+      const handleTimelineMouseDown = (e, tweenId) => {
+        if (isPlaying) return;
+        const rect = timelineRef.current.getBoundingClientRect();
+        const startX = e.clientX;
+        const tween = tweens.find(t => t.id === tweenId);
+        
+        setDraggingBlock({
+          id: tweenId,
+          startX,
+          originalStartTime: tween.startTime,
+          rectWidth: rect.width
+        });
+      };
+
+      useEffect(() => {
+        const handleMouseMove = (e) => {
+          if (!draggingBlock) return;
+          const deltaX = e.clientX - draggingBlock.startX;
+          const timeDelta = (deltaX / draggingBlock.rectWidth) * maxTimelineDuration;
+          let newStartTime = clamp(draggingBlock.originalStartTime + timeDelta, 0, maxTimelineDuration - 0.1);
+          
+          updateTween(draggingBlock.id, { startTime: Number(newStartTime.toFixed(2)) });
+        };
+
+        const handleMouseUp = () => setDraggingBlock(null);
+
+        if (draggingBlock) {
+          window.addEventListener('mousemove', handleMouseMove);
+          window.addEventListener('mouseup', handleMouseUp);
+        }
+        return () => {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+        };
+      }, [draggingBlock, maxTimelineDuration]);
+
+      // --- Code Generation ---
+      const generateLuaCode = () => {
+        let code = `-- Generated by Tween Studio\n`;
+        code += `local TweenService = game:GetService("TweenService")\n`;
+        code += `local target = script.Parent -- Replace with your actual UI object\n\n`;
+
+        const sortedTweens = [...tweens].sort((a, b) => a.startTime - b.startTime);
+
+        sortedTweens.forEach((t, i) => {
+          const idx = i + 1;
+          code += `-- [${t.name}] starts at ${t.startTime}s\n`;
+          code += `local tweenInfo${idx} = TweenInfo.new(\n`;
+          code += `    ${t.duration},\n`;
+          code += `    Enum.EasingStyle.${t.easingStyle},\n`;
+          code += `    Enum.EasingDirection.${t.easingDirection},\n`;
+          code += `    ${t.repeatCount},\n`;
+          code += `    ${t.reverses},\n`;
+          code += `    ${t.delay}\n`;
+          code += `)\n\n`;
+
+          code += `local properties${idx} = {\n`;
+          Object.entries(t.properties).forEach(([prop, val]) => {
+            if (prop === 'Position' || prop === 'Size') {
+              code += `    ${prop} = UDim2.new(${val.xs}, ${val.xo}, ${val.ys}, ${val.yo}),\n`;
+            } else if (prop === 'BackgroundColor3') {
+              const rgb = hexToRgb(val);
+              code += `    ${prop} = Color3.new(${rgb.r.toFixed(3)}, ${rgb.g.toFixed(3)}, ${rgb.b.toFixed(3)}),\n`;
+            } else {
+              code += `    ${prop} = ${val},\n`;
+            }
+          });
+          code += `}\n\n`;
+
+          code += `local tween${idx} = TweenService:Create(target, tweenInfo${idx}, properties${idx})\n`;
+          
+          if (t.startTime === 0) {
+            code += `tween${idx}:Play()\n\n`;
+          } else {
+            code += `task.delay(${t.startTime}, function()\n`;
+            code += `    tween${idx}:Play()\n`;
+            code += `end)\n\n`;
+          }
+        });
+
+        return code;
+      };
+
+      const copyToClipboard = () => {
+        navigator.clipboard.writeText(generateLuaCode());
+        setCopiedCode(true);
+        setTimeout(() => setCopiedCode(false), 2000);
+      };
+
+      // --- Sub-components ---
+      const NumberInput = ({ label, value, onChange, min, max, step = 1 }) => (
+        <div className="flex flex-col">
+          <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">{label}</label>
+          <input 
+            type="number" 
+            value={value} 
+            onChange={(e) => onChange(Number(e.target.value))}
+            min={min} max={max} step={step}
+            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md px-2 py-1.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 w-full transition-all"
+          />
+        </div>
+      );
+
+      const SelectInput = ({ label, value, options, onChange }) => (
+        <div className="flex flex-col">
+          <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">{label}</label>
+          <select 
+            value={value} 
+            onChange={(e) => onChange(e.target.value)}
+            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md px-2 py-1.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 w-full transition-all"
+          >
+            {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          </select>
+        </div>
+      );
+
+      const UDim2Input = ({ label, value, onChange }) => (
+        <div className="mb-4 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-slate-800 transition-colors">
+          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-3 block">{label}</label>
+          <div className="grid grid-cols-2 gap-3">
+            <NumberInput label="Scale X" step="0.1" value={value.xs} onChange={(v) => onChange({...value, xs: v})} />
+            <NumberInput label="Offset X" value={value.xo} onChange={(v) => onChange({...value, xo: v})} />
+            <NumberInput label="Scale Y" step="0.1" value={value.ys} onChange={(v) => onChange({...value, ys: v})} />
+            <NumberInput label="Offset Y" value={value.yo} onChange={(v) => onChange({...value, yo: v})} />
+          </div>
+        </div>
+      );
+
+      // --- Rendering ---
+      const selectedTween = tweens.find(t => t.id === selectedTweenId);
+
+      return (
+        <div className="h-screen w-screen bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 flex flex-col font-sans overflow-hidden transition-colors duration-200">
+          
+          {/* Top Header */}
+          <header className="h-14 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 z-10 shrink-0 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20">
+                <Icon name="layers" size={18} className="text-white" />
+              </div>
+              <h1 className="font-bold text-lg tracking-tight text-slate-900 dark:text-white">Tween Studio</h1>
+            </div>
+
+            {/* Playback Controls */}
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-950 rounded-lg p-1 border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+              <button 
+                onClick={stopPlayback}
+                className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                <Icon name="square" size={16} fill="currentColor" />
+              </button>
+              <button 
+                onClick={togglePlay}
+                className={`p-1.5 rounded-md transition-colors ${isPlaying ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+              >
+                {isPlaying ? <Icon name="pause" size={16} fill="currentColor" /> : <Icon name="play" size={16} fill="currentColor" />}
+              </button>
+              
+              <div className="flex items-center border-l border-slate-200 dark:border-slate-800 ml-1 pl-2">
+                <input 
+                  type="number" 
+                  min="0" 
+                  max={maxTimelineDuration} 
+                  step="0.01"
+                  value={Number(currentTime).toFixed(2)}
+                  onChange={(e) => {
+                    if (isPlaying) stopPlayback();
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) {
+                      setCurrentTime(clamp(val, 0, maxTimelineDuration));
+                    }
+                  }}
+                  className="w-14 text-right font-mono text-sm text-blue-600 dark:text-blue-400 bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500/50 rounded"
+                />
+                <span className="font-mono text-sm text-blue-600 dark:text-blue-400 select-none ml-0.5">s</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Theme Switcher */}
+              <button 
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors"
+                aria-label="Toggle Theme"
+              >
+                {isDarkMode ? <Icon name="sun" size={18} /> : <Icon name="moon" size={18} />}
+              </button>
+
+              <button 
+                onClick={() => setShowExport(true)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-colors shadow-sm shadow-blue-500/20"
+              >
+                <Icon name="code" size={16} />
+                Export Lua
+              </button>
+            </div>
+          </header>
+
+          {/* Main Workspace */}
+          <div className="flex-1 flex min-h-0">
+            
+            {/* Left Panel: Elements / Tweens List */}
+            <aside className="w-64 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0 transition-colors">
+              <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white/50 dark:bg-slate-900/50">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Animation Tracks</span>
+                <button onClick={addTween} className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                  <Icon name="plus" size={16} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+                <div 
+                  className={`p-2.5 rounded-lg cursor-pointer text-sm flex items-center gap-2 transition-all ${!selectedTweenId ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800/50 shadow-sm' : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 border border-transparent'}`}
+                  onClick={() => setSelectedTweenId(null)}
+                >
+                  <Icon name="settings" size={14} /> Base State
+                </div>
+                
+                {tweens.map((tween) => (
+                  <div 
+                    key={tween.id}
+                    onClick={() => setSelectedTweenId(tween.id)}
+                    className={`group p-2.5 rounded-lg cursor-pointer text-sm flex items-center justify-between border transition-all ${selectedTweenId === tween.id ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-300 dark:border-slate-700 shadow-sm' : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 border-transparent'}`}
+                  >
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${selectedTweenId === tween.id ? 'bg-blue-500' : 'bg-slate-400 dark:bg-slate-600'}`}></div>
+                      <span className="truncate font-medium">{tween.name}</span>
+                    </div>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); deleteTween(tween.id); }}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-500 dark:hover:text-red-400 transition-opacity"
+                    >
+                      <Icon name="trash-2" size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </aside>
+
+            {/* Center Panel: Preview & Timeline */}
+            <main className="flex-1 flex flex-col min-w-0 bg-slate-100 dark:bg-slate-950 relative transition-colors">
+              
+              {/* Live Preview Area */}
+              <div className="flex-1 relative overflow-hidden" 
+                   style={{ 
+                     backgroundImage: isDarkMode ? 'radial-gradient(#334155 1px, transparent 1px)' : 'radial-gradient(#cbd5e1 1px, transparent 1px)', 
+                     backgroundSize: '24px 24px',
+                   }}>
+                <div className="absolute inset-0 flex items-center justify-center opacity-10 dark:opacity-20 pointer-events-none">
+                   <span className="text-4xl font-black text-slate-500 dark:text-slate-700">PREVIEW</span>
+                </div>
+                
+                {/* The Target Object */}
+                <div className="relative w-full h-full border-4 border-slate-300/50 dark:border-slate-800/50 m-auto">
+                  <div 
+                    className="shadow-2xl rounded-lg flex items-center justify-center text-xs font-bold text-white/90 border border-white/20"
+                    style={{
+                      ...currentPreviewStyles,
+                      transition: 'none', 
+                      willChange: 'left, top, width, height, transform, opacity, background-color'
+                    }}
+                  >
+                    TARGET
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline Editor */}
+              <div className="h-64 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-col shrink-0 selection:bg-transparent transition-colors shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                {/* Timeline Header (Ruler) */}
+                <div 
+                  ref={rulerRef}
+                  onMouseDown={handleRulerMouseDown}
+                  className="h-8 border-b border-slate-200 dark:border-slate-800 flex items-center relative overflow-hidden bg-slate-50 dark:bg-slate-900 transition-colors cursor-ew-resize group"
+                >
+                   {/* Hover Scrubber Highlight */}
+                   <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/5 transition-colors pointer-events-none"></div>
+
+                   {Array.from({ length: maxTimelineDuration + 1 }).map((_, i) => (
+                     <div key={i} className="absolute h-full border-l border-slate-300 dark:border-slate-700/50 flex flex-col justify-end pb-1 pointer-events-none" style={{ left: `${(i / maxTimelineDuration) * 100}%` }}>
+                       <span className="text-[10px] text-slate-500 dark:text-slate-500 ml-1 select-none font-medium pointer-events-none">{i}s</span>
+                     </div>
+                   ))}
+                   {/* Playhead */}
+                   <div 
+                     className="absolute top-0 bottom-0 w-[1px] bg-red-500 z-20 pointer-events-none"
+                     style={{ left: `${(currentTime / maxTimelineDuration) * 100}%` }}
+                   >
+                     <div className="absolute top-0 -translate-x-1/2 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[6px] border-t-red-500"></div>
+                   </div>
+                </div>
+
+                {/* Timeline Tracks */}
+                <div className="flex-1 overflow-y-auto relative" ref={timelineRef}>
+                  {/* Grid Lines */}
+                  <div className="absolute inset-0 pointer-events-none">
+                     {Array.from({ length: maxTimelineDuration * 2 }).map((_, i) => (
+                       <div key={i} className={`absolute h-full border-l ${i%2===0 ? 'border-slate-200 dark:border-slate-800/80' : 'border-slate-100 dark:border-slate-800/30'}`} style={{ left: `${(i / (maxTimelineDuration*2)) * 100}%` }}></div>
+                     ))}
+                  </div>
+
+                  {tweens.map((tween) => {
+                    const isSelected = selectedTweenId === tween.id;
+                    const leftPos = (tween.startTime / maxTimelineDuration) * 100;
+                    const widthPos = (tween.duration / maxTimelineDuration) * 100;
+                    
+                    return (
+                      <div key={tween.id} className="h-10 relative border-b border-slate-100 dark:border-slate-800/50 flex items-center group">
+                         <div className="absolute inset-0 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors"></div>
+                         
+                         {/* Tween Block */}
+                         <div 
+                            onMouseDown={(e) => handleTimelineMouseDown(e, tween.id)}
+                            onClick={() => setSelectedTweenId(tween.id)}
+                            className={`absolute h-7 rounded-md shadow-sm cursor-col-resize flex items-center px-2 overflow-hidden transition-shadow ${isSelected ? 'bg-blue-600 ring-2 ring-blue-400 z-10' : 'bg-slate-600 dark:bg-slate-700 hover:bg-slate-500 dark:hover:bg-slate-600'}`}
+                            style={{ 
+                              left: `${leftPos}%`, 
+                              width: `${widthPos}%`,
+                              minWidth: '20px'
+                            }}
+                         >
+                           <span className="text-[11px] font-medium text-white truncate pointer-events-none drop-shadow-sm">
+                             {tween.name}
+                           </span>
+                         </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </main>
+
+            {/* Right Panel: Properties */}
+            <aside className="w-80 bg-slate-50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0 overflow-y-auto transition-colors">
+              {selectedTween ? (
+                 <div className="p-5">
+                    <div className="flex items-center gap-2 mb-6 text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-800 pb-4">
+                      <Icon name="mouse-pointer-2" size={18} className="text-blue-500" />
+                      <h2 className="font-semibold text-lg">{selectedTween.name}</h2>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 block">General</label>
+                        <div className="space-y-3">
+                          <div className="flex items-center bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-md px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500/50 focus-within:border-blue-500 transition-all">
+                            <span className="text-xs font-medium text-slate-500 w-16">Name</span>
+                            <input 
+                              type="text" 
+                              value={selectedTween.name} 
+                              onChange={(e) => updateTween(selectedTween.id, { name: e.target.value })}
+                              className="bg-transparent border-none outline-none text-sm text-slate-900 dark:text-white w-full"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 block">TweenInfo</label>
+                        <div className="grid grid-cols-2 gap-4 p-4 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm">
+                          <NumberInput label="Duration (s)" min={0.1} step={0.1} value={selectedTween.duration} onChange={(v) => updateTween(selectedTween.id, { duration: v })} />
+                          <NumberInput label="Start Time (s)" min={0} step={0.1} value={selectedTween.startTime} onChange={(v) => updateTween(selectedTween.id, { startTime: v })} />
+                          <NumberInput label="Delay (s)" min={0} step={0.1} value={selectedTween.delay} onChange={(v) => updateTween(selectedTween.id, { delay: v })} />
+                          <NumberInput label="RepeatCount" min={-1} value={selectedTween.repeatCount} onChange={(v) => updateTween(selectedTween.id, { repeatCount: v })} />
+                          
+                          <div className="col-span-2 grid grid-cols-2 gap-4 pt-2">
+                            <SelectInput label="EasingStyle" value={selectedTween.easingStyle} options={EasingStyles} onChange={(v) => updateTween(selectedTween.id, { easingStyle: v })} />
+                            <SelectInput label="Direction" value={selectedTween.easingDirection} options={EasingDirections} onChange={(v) => updateTween(selectedTween.id, { easingDirection: v })} />
+                          </div>
+                          
+                          <div className="col-span-2 flex items-center gap-2 mt-3 bg-slate-50 dark:bg-slate-950 p-2 rounded-md border border-slate-200 dark:border-slate-800">
+                            <input 
+                              type="checkbox" 
+                              id="reverses"
+                              checked={selectedTween.reverses}
+                              onChange={(e) => updateTween(selectedTween.id, { reverses: e.target.checked })}
+                              className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
+                            />
+                            <label htmlFor="reverses" className="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">Reverses</label>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Target Properties</label>
+                          <div className="relative group">
+                            <button className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-md transition-colors">
+                              <Icon name="plus" size={12}/> Add Property
+                            </button>
+                            <div className="absolute right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md shadow-xl hidden group-hover:block z-20 w-48 overflow-hidden">
+                              {['Position', 'Size', 'Rotation', 'BackgroundTransparency', 'BackgroundColor3'].map(prop => (
+                                <button 
+                                  key={prop}
+                                  className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                  onClick={() => {
+                                    if(!selectedTween.properties[prop]) {
+                                      updateTween(selectedTween.id, { 
+                                        properties: { ...selectedTween.properties, [prop]: prop === 'Position' || prop === 'Size' ? {xs:0,xo:0,ys:0,yo:0} : prop === 'BackgroundColor3' ? '#ffffff' : 0 }
+                                      });
+                                    }
+                                  }}
+                                >
+                                  {prop}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          {Object.keys(selectedTween.properties).length === 0 && (
+                            <div className="flex flex-col items-center justify-center py-8 px-4 bg-white dark:bg-slate-900/30 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
+                               <Icon name="layers" className="text-slate-300 dark:text-slate-600 mb-2" size={24} />
+                               <p className="text-sm font-medium text-slate-500 dark:text-slate-400 text-center">No properties animated.</p>
+                               <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-1">Click "Add Property" to start.</p>
+                            </div>
+                          )}
+
+                          {Object.entries(selectedTween.properties).map(([prop, val]) => (
+                            <div key={prop} className="relative group/prop">
+                              <button 
+                                onClick={() => {
+                                  const newProps = {...selectedTween.properties};
+                                  delete newProps[prop];
+                                  updateTween(selectedTween.id, { properties: newProps });
+                                }}
+                                className="absolute -right-2 -top-2 w-6 h-6 bg-red-100 dark:bg-red-500/10 hover:bg-red-200 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 rounded-full items-center justify-center hidden group-hover/prop:flex z-10 transition-colors shadow-sm"
+                              >
+                                <Icon name="trash-2" size={12} />
+                              </button>
+
+                              {prop === 'Position' || prop === 'Size' ? (
+                                <UDim2Input 
+                                  label={prop} 
+                                  value={val} 
+                                  onChange={(newVal) => updateTween(selectedTween.id, { properties: { ...selectedTween.properties, [prop]: newVal } })} 
+                                />
+                              ) : prop === 'BackgroundColor3' ? (
+                                <div className="flex items-center gap-3 bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+                                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 w-32 truncate">{prop}</label>
+                                  <input 
+                                    type="color" 
+                                    value={val} 
+                                    onChange={(e) => updateTween(selectedTween.id, { properties: { ...selectedTween.properties, [prop]: e.target.value } })}
+                                    className="w-8 h-8 rounded-md cursor-pointer bg-transparent border-0 p-0 shadow-sm"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-3 bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+                                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300 w-32 truncate">{prop}</label>
+                                  <input 
+                                    type="number" 
+                                    step={prop.includes('Transparency') ? "0.1" : "1"}
+                                    value={val} 
+                                    onChange={(e) => updateTween(selectedTween.id, { properties: { ...selectedTween.properties, [prop]: Number(e.target.value) } })}
+                                    className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-md px-3 py-1.5 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                 </div>
+              ) : (
+                 <div className="p-5">
+                   <div className="flex items-center gap-2 mb-6 text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-800 pb-4">
+                      <Icon name="settings" size={18} className="text-slate-500 dark:text-slate-400" />
+                      <h2 className="font-semibold text-lg">Base Properties</h2>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border border-blue-100 dark:border-blue-800/50">
+                      These are the initial properties of the UI element before any tweens play.
+                    </p>
+                    <div className="space-y-4">
+                      <UDim2Input label="Position" value={baseState.Position} onChange={(v) => setBaseState({...baseState, Position: v})} />
+                      <UDim2Input label="Size" value={baseState.Size} onChange={(v) => setBaseState({...baseState, Size: v})} />
+                      
+                      <div className="bg-white dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                         <NumberInput label="Rotation" value={baseState.Rotation} onChange={(v) => setBaseState({...baseState, Rotation: v})} />
+                         <NumberInput label="BackgroundTransparency" step={0.1} min={0} max={1} value={baseState.BackgroundTransparency} onChange={(v) => setBaseState({...baseState, BackgroundTransparency: v})} />
+                         <div className="flex flex-col pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <label className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-2">BackgroundColor3</label>
+                            <input 
+                              type="color" 
+                              value={baseState.BackgroundColor3} 
+                              onChange={(e) => setBaseState({...baseState, BackgroundColor3: e.target.value})}
+                              className="w-full h-10 rounded-md cursor-pointer bg-transparent border-0 p-0 shadow-sm"
+                            />
+                         </div>
+                      </div>
+                    </div>
+                 </div>
+              )}
+            </aside>
+          </div>
+
+          {/* Export Modal */}
+          {showExport && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden">
+                <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                  <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2"><Icon name="code" size={18} className="text-blue-500"/> Generated Lua Code</h3>
+                  <button onClick={() => setShowExport(false)} className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors">
+                    <Icon name="plus" size={20} className="rotate-45" />
+                  </button>
+                </div>
+                
+                <div className="flex-1 p-4 bg-slate-950 dark:bg-[#0d1117] relative">
+                  <pre className="font-mono text-sm text-blue-300 dark:text-blue-200 h-[60vh] overflow-auto whitespace-pre-wrap">
+                    <code>{generateLuaCode()}</code>
+                  </pre>
+                </div>
+
+                <div className="px-5 py-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3 bg-slate-50 dark:bg-slate-800/50">
+                  <button 
+                    onClick={() => setShowExport(false)}
+                    className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button 
+                    onClick={copyToClipboard}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md text-sm font-medium transition-colors flex items-center gap-2 shadow-sm shadow-blue-500/20"
+                  >
+                    {copiedCode ? <Icon name="check" size={16} /> : <Icon name="copy" size={16} />}
+                    {copiedCode ? 'Copied!' : 'Copy to Clipboard'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<TweenStudio />);
+  </script>
+</body>
+</html>
